@@ -63,36 +63,42 @@ def check_market(symbol, params, position_status):
     rsi_p, r_buy, r_sell, ex_l, ex_s = params
     
     try:
+        # Pobieramy dane
         df = yf.download(symbol, period="6mo", interval="1d", progress=False)
         if df.empty: return None
         
         if isinstance(df.columns, pd.MultiIndex): df.columns = [c[0].lower() for c in df.columns]
         else: df.columns = [c.lower() for c in df.columns]
 
+        # Obliczenia
         rsi_series = calculate_rsi(df['close'], rsi_p)
         current_rsi = rsi_series.iloc[-1]
         current_price = df['close'].iloc[-1]
         
+        # --- DATA SYGNAŁU ---
+        # Pobieramy datę ostatniej świecy i formatujemy na YYYY-MM-DD
+        last_date = df.index[-1].strftime('%Y-%m-%d')
+
         msg = ""
         
-        # --- LOGIKA FILTROWANIA SYGNAŁÓW ---
+        # --- LOGIKA ---
         
-        # 1. Jeśli NIE MAMY pozycji (status jest None) -> Szukamy tylko WEJŚCIA
+        # 1. Szukamy WEJŚCIA (tylko gdy nie ma pozycji)
         if position_status is None:
             if current_rsi < r_buy:
-                msg += f"🟢 **OKAZJA LONG!**\n{symbol}: RSI {current_rsi:.1f} (Taniej niż {r_buy})\nCena: {current_price:.2f}\n\n"
+                msg += f"🟢 **OKAZJA LONG!** [{last_date}]\n{symbol}: RSI {current_rsi:.1f} (< {r_buy})\nCena: {current_price:.2f}\n\n"
             elif current_rsi > r_sell:
-                msg += f"🔴 **OKAZJA SHORT!**\n{symbol}: RSI {current_rsi:.1f} (Drożej niż {r_sell})\nCena: {current_price:.2f}\n\n"
+                msg += f"🔴 **OKAZJA SHORT!** [{last_date}]\n{symbol}: RSI {current_rsi:.1f} (> {r_sell})\nCena: {current_price:.2f}\n\n"
         
-        # 2. Jeśli mamy LONGA -> Szukamy tylko WYJŚCIA z Longa
+        # 2. Szukamy WYJŚCIA Z LONGA
         elif position_status == "LONG":
             if current_rsi > ex_l:
-                msg += f"💰 **ZAMKNIJ LONGA!**\n{symbol}: RSI {current_rsi:.1f} przebiło próg {ex_l}.\n\n"
+                msg += f"💰 **ZAMKNIJ LONGA!** [{last_date}]\n{symbol}: RSI {current_rsi:.1f} przebiło {ex_l}.\n\n"
 
-        # 3. Jeśli mamy SHORTA -> Szukamy tylko WYJŚCIA z Shorta
+        # 3. Szukamy WYJŚCIA Z SHORTA
         elif position_status == "SHORT":
             if current_rsi < ex_s:
-                msg += f"💰 **ZAMKNIJ SHORTA!**\n{symbol}: RSI {current_rsi:.1f} przebiło próg {ex_s}.\n\n"
+                msg += f"💰 **ZAMKNIJ SHORTA!** [{last_date}]\n{symbol}: RSI {current_rsi:.1f} przebiło {ex_s}.\n\n"
 
         return msg
     except Exception:
@@ -101,19 +107,17 @@ def check_market(symbol, params, position_status):
 def main():
     report = ""
     
-    # Iterujemy przez wszystkie rynki
+    # Iterujemy przez rynki
     for symbol, params in PORTFOLIO.items():
-        # Sprawdzamy, czy mamy otwartą pozycję w naszym rejestrze
-        status = MOJE_POZYCJE.get(symbol, None) # Zwraca "LONG", "SHORT" lub None
-        
+        status = MOJE_POZYCJE.get(symbol, None)
         alert = check_market(symbol, params, status)
         if alert:
             report += alert
             
     if report:
-        header = f"🔔 **ALARM PORTFELA** ({datetime.now().strftime('%H:%M')})\n\n"
+        # Dodajemy czas wysłania raportu (czas serwera UTC)
+        header = f"🔔 **ALARM RYNKOWY**\nData sprawdzenia: {datetime.now().strftime('%Y-%m-%d %H:%M')} UTC\n\n"
         send_telegram(header + report)
-    # Jeśli nie ma raportu, bot milczy (zgodnie z życzeniem)
 
 if __name__ == "__main__":
     main()
