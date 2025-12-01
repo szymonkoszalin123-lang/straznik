@@ -9,20 +9,19 @@ TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
 
 # === TWOJE POZYCJE (EDYTUJ RĘCZNIE!) ===
+# Wpisz tutaj co masz otwarte.
 MOJE_POZYCJE = {
     # "BTC-USD": "LONG",
     # "SI=F": "LONG",
+    # "^STOXX50E": "SHORT", 
     "^STOXX50E": "SHORT",
     "BTC-USD": "SHORT",
     "DOGE-USD": "SHORT",
-    "SOL-USD": "SHORT",
+    "SOL-USD": "SHORT,
     "LE=F": "SHORT"
 }
 
-# ==================================================
-# BAZA DANYCH RYNKÓW (TUTAJ BYŁ BŁĄD - TERAZ SĄ OBIE LISTY)
-# ==================================================
-
+# === BAZA DANYCH RYNKÓW ===
 # 1. PORTFOLIO TREND FOLLOWING (Wybicia + EMA)
 # Format: "Symbol": [IN, OUT, EMA]
 PORTFOLIO_TREND = {
@@ -32,12 +31,13 @@ PORTFOLIO_TREND = {
     "DOT-USD": [5, 30, 30],
     "KSM-USD": [10, 30, 30],
     "DOGE-USD":[5, 10, 100],
-    "LE=F":    [40, 25, 30]
+    "LE=F":    [40, 25, 30],
+    "^NDX":    [40, 50, 50] # Zapasowy
 }
 
 # 2. PORTFOLIO MEAN REVERSION (RSI + ATR)
 # Format: "Symbol": [RSI_PER, RSI_BUY, RSI_SELL, RSI_EXIT_L, RSI_EXIT_S]
-PORTFOLIO_MEANREV = {
+PORTFOLIO = {
     "CC=F":  [5, 10, 90, 50, 50],
     "CT=F":  [5, 30, 80, 50, 40],
     "GC=F":  [14, 30, 90, 60, 50],
@@ -73,8 +73,8 @@ def send_telegram(message):
     except Exception: pass
 
 def get_market_data(symbol):
+    """Pobiera dane i spłaszcza MultiIndex"""
     try:
-        # Dodano auto_adjust=False, żeby uciszyć ostrzeżenia yfinance
         df = yf.download(symbol, period="1y", interval="1d", progress=False, auto_adjust=False)
         if df.empty: return None
         if isinstance(df.columns, pd.MultiIndex): df.columns = [c[0].lower() for c in df.columns]
@@ -82,16 +82,19 @@ def get_market_data(symbol):
         return df
     except: return None
 
-# === LOGIKA TREND FOLLOWING ===
+# === LOGIKA TREND FOLLOWING (Z MODYFIKACJĄ SL) ===
 def check_trend(symbol, params, position_status):
     in_p, out_p, ema_p = params
     df = get_market_data(symbol)
     if df is None: return None
 
     df['ema'] = df['close'].ewm(span=ema_p, adjust=False).mean()
+    
+    # Obliczamy poziomy wejścia/wyjścia (przesunięte o 1 dzień)
     high_in = df['high'].rolling(window=in_p).max().shift(1).iloc[-1]
     low_in  = df['low'].rolling(window=in_p).min().shift(1).iloc[-1]
     
+    # To są Twoje poziomy Stop Loss (Kanał Wyjścia)
     low_out = df['low'].rolling(window=out_p).min().shift(1).iloc[-1]
     high_out = df['high'].rolling(window=out_p).max().shift(1).iloc[-1]
     
@@ -101,17 +104,31 @@ def check_trend(symbol, params, position_status):
     
     msg = ""
 
+    # 1. Szukamy WEJŚCIA (Gdy brak pozycji)
     if position_status is None:
         if price > ema and price > high_in:
-             msg += f"🌊 **TREND LONG!** [{last_date}]\n{symbol}: Wybicie {in_p}-dni ({high_in:.2f})\nCena: {price:.2f}\n\n"
+             msg += f"🌊 **TREND LONG!** [{last_date}]\n{symbol}: Cena {price:.2f} > Szczyt {high_in:.2f}\n\n"
         elif price < ema and price < low_in:
-             msg += f"🌊 **TREND SHORT!** [{last_date}]\n{symbol}: Wybicie {in_p}-dni ({low_in:.2f})\nCena: {price:.2f}\n\n"
+             msg += f"🌊 **TREND SHORT!** [{last_date}]\n{symbol}: Cena {price:.2f} < Dołek {low_in:.2f}\n\n"
+
+    # 2. MONITOROWANIE POZYCJI (Zawsze pokazuje SL!)
     elif position_status == "LONG":
+        # Zawsze pokaż status
+        msg += f"ℹ️ **STATUS: {symbol} [LONG]**\n   Cena: {price:.2f}\n   🛡️ **Twój Stop Loss (Kanał {out_p}): {low_out:.2f}**\n"
+        
+        # Sprawdź czy wybiło
         if price < low_out:
-             msg += f"🚪 **ZAMKNIJ LONG (OUT)!** [{last_date}]\n{symbol}: Wybicie {out_p}-dni ({low_out:.2f})\n\n"
+             msg += f"   🚨 **ALARM: PRZEBICIE SL! ZAMKNIJ!**\n"
+        msg += "\n"
+    
     elif position_status == "SHORT":
+        # Zawsze pokaż status
+        msg += f"ℹ️ **STATUS: {symbol} [SHORT]**\n   Cena: {price:.2f}\n   🛡️ **Twój Stop Loss (Kanał {out_p}): {high_out:.2f}**\n"
+        
+        # Sprawdź czy wybiło
         if price > high_out:
-             msg += f"🚪 **ZAMKNIJ SHORT (OUT)!** [{last_date}]\n{symbol}: Wybicie {out_p}-dni ({high_out:.2f})\n\n"
+             msg += f"   🚨 **ALARM: PRZEBICIE SL! ZAMKNIJ!**\n"
+        msg += "\n"
 
     return msg
 
@@ -155,13 +172,13 @@ def check_meanrev(symbol, params, position_status):
 def main():
     report = ""
     
-    # 1. Sprawdź TREND
+    # 1. Sprawdź Strategię TREND
     for symbol, params in PORTFOLIO_TREND.items():
         status = MOJE_POZYCJE.get(symbol, None)
         alert = check_trend(symbol, params, status)
         if alert: report += alert
             
-    # 2. Sprawdź MEAN REVERSION (Teraz ta zmienna istnieje!)
+    # 2. Sprawdź Strategię MEAN REVERSION
     for symbol, params in PORTFOLIO_MEANREV.items():
         status = MOJE_POZYCJE.get(symbol, None)
         alert = check_meanrev(symbol, params, status)
@@ -173,4 +190,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
