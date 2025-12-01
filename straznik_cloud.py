@@ -9,7 +9,7 @@ TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
 
 # === TWOJE POZYCJE (EDYTUJ RĘCZNIE!) ===
-# Wpisz tutaj co masz otwarte.
+# Tutaj wpisujesz, co masz otwarte.
 MOJE_POZYCJE = {
     # "BTC-USD": "LONG",
     # "SI=F": "LONG",
@@ -73,8 +73,8 @@ def send_telegram(message):
     except Exception: pass
 
 def get_market_data(symbol):
-    """Pobiera dane i spłaszcza MultiIndex"""
     try:
+        # auto_adjust=False jest ważne dla spójności danych
         df = yf.download(symbol, period="1y", interval="1d", progress=False, auto_adjust=False)
         if df.empty: return None
         if isinstance(df.columns, pd.MultiIndex): df.columns = [c[0].lower() for c in df.columns]
@@ -82,57 +82,15 @@ def get_market_data(symbol):
         return df
     except: return None
 
-# === LOGIKA TREND FOLLOWING (Z MODYFIKACJĄ SL) ===
-def check_trend(symbol, params, position_status):
-    in_p, out_p, ema_p = params
-    df = get_market_data(symbol)
-    if df is None: return None
+# --- Wskaźniki ---
+def calculate_atr(df, period):
+    df['tr0'] = abs(df['high'] - df['low'])
+    df['tr1'] = abs(df['high'] - df['close'].shift())
+    df['tr2'] = abs(df['low'] - df['close'].shift())
+    df['tr'] = df[['tr0', 'tr1', 'tr2']].max(axis=1)
+    # Używamy SMA dla ATR (zgodnie z Twoim życzeniem "Raw")
+    return df['tr'].rolling(window=period).mean()
 
-    df['ema'] = df['close'].ewm(span=ema_p, adjust=False).mean()
-    
-    # Obliczamy poziomy wejścia/wyjścia (przesunięte o 1 dzień)
-    high_in = df['high'].rolling(window=in_p).max().shift(1).iloc[-1]
-    low_in  = df['low'].rolling(window=in_p).min().shift(1).iloc[-1]
-    
-    # To są Twoje poziomy Stop Loss (Kanał Wyjścia)
-    low_out = df['low'].rolling(window=out_p).min().shift(1).iloc[-1]
-    high_out = df['high'].rolling(window=out_p).max().shift(1).iloc[-1]
-    
-    price = df['close'].iloc[-1]
-    ema = df['ema'].iloc[-1]
-    last_date = df.index[-1].strftime('%Y-%m-%d')
-    
-    msg = ""
-
-    # 1. Szukamy WEJŚCIA (Gdy brak pozycji)
-    if position_status is None:
-        if price > ema and price > high_in:
-             msg += f"🌊 **TREND LONG!** [{last_date}]\n{symbol}: Cena {price:.2f} > Szczyt {high_in:.2f}\n\n"
-        elif price < ema and price < low_in:
-             msg += f"🌊 **TREND SHORT!** [{last_date}]\n{symbol}: Cena {price:.2f} < Dołek {low_in:.2f}\n\n"
-
-    # 2. MONITOROWANIE POZYCJI (Zawsze pokazuje SL!)
-    elif position_status == "LONG":
-        # Zawsze pokaż status
-        msg += f"ℹ️ **STATUS: {symbol} [LONG]**\n   Cena: {price:.2f}\n   🛡️ **Twój Stop Loss (Kanał {out_p}): {low_out:.2f}**\n"
-        
-        # Sprawdź czy wybiło
-        if price < low_out:
-             msg += f"   🚨 **ALARM: PRZEBICIE SL! ZAMKNIJ!**\n"
-        msg += "\n"
-    
-    elif position_status == "SHORT":
-        # Zawsze pokaż status
-        msg += f"ℹ️ **STATUS: {symbol} [SHORT]**\n   Cena: {price:.2f}\n   🛡️ **Twój Stop Loss (Kanał {out_p}): {high_out:.2f}**\n"
-        
-        # Sprawdź czy wybiło
-        if price > high_out:
-             msg += f"   🚨 **ALARM: PRZEBICIE SL! ZAMKNIJ!**\n"
-        msg += "\n"
-
-    return msg
-
-# === LOGIKA MEAN REVERSION ===
 def calculate_rsi(series, period):
     delta = series.diff()
     gain = (delta.where(delta > 0, 0)).ewm(alpha=1/period, min_periods=period, adjust=False).mean()
@@ -140,6 +98,66 @@ def calculate_rsi(series, period):
     rs = gain / loss
     return 100 - (100 / (1 + rs))
 
+# === LOGIKA TREND FOLLOWING (SMART SL) ===
+def check_trend(symbol, params, position_status):
+    in_p, out_p, ema_p, atr_p, k_tsl = params
+    df = get_market_data(symbol)
+    if df is None: return None
+
+    # Obliczenia
+    df['ema'] = df['close'].ewm(span=ema_p, adjust=False).mean()
+    atr_series = calculate_atr(df, atr_p)
+    
+    # Kanały Donchiana
+    high_in = df['high'].rolling(window=in_p).max().shift(1).iloc[-1]
+    low_in  = df['low'].rolling(window=in_p).min().shift(1).iloc[-1]
+    low_out = df['low'].rolling(window=out_p).min().shift(1).iloc[-1]
+    high_out = df['high'].rolling(window=out_p).max().shift(1).iloc[-1]
+    
+    # ATR Trailing Stop
+    # Symulujemy "najwyższy szczyt od wejścia" biorąc szczyt z ostatnich IN dni
+    recent_high = df['high'].rolling(window=in_p).max().iloc[-1]
+    recent_low = df['low'].rolling(window=in_p).min().iloc[-1]
+    current_atr = atr_series.iloc[-1]
+
+    atr_sl_long = recent_high - (k_tsl * current_atr)
+    atr_sl_short = recent_low + (k_tsl * current_atr)
+    
+    price = df['close'].iloc[-1]
+    ema = df['ema'].iloc[-1]
+    last_date = df.index[-1].strftime('%Y-%m-%d')
+    
+    msg = ""
+
+    # 1. WEJŚCIA
+    if position_status is None:
+        if price > ema and price > high_in:
+             msg += f"🌊 **TREND LONG!** [{last_date}]\n{symbol}: Wybicie {high_in:.2f}\nCena: {price:.2f}\n\n"
+        elif price < ema and price < low_in:
+             msg += f"🌊 **TREND SHORT!** [{last_date}]\n{symbol}: Wybicie {low_in:.2f}\nCena: {price:.2f}\n\n"
+
+    # 2. MONITOROWANIE (SMART SL)
+    elif position_status == "LONG":
+        # Wybieramy wyższy (bezpieczniejszy) stop dla Longa
+        smart_sl = max(low_out, atr_sl_long)
+        source = "ATR" if smart_sl == atr_sl_long else "Kanał"
+        
+        msg += f"ℹ️ **STATUS: {symbol} [LONG]**\n   Cena: {price:.2f}\n   🛡️ **SL: {smart_sl:.2f}** ({source})\n"
+        if price < smart_sl: msg += f"   🚨 **ALARM: PRZEBICIE SL!**\n"
+        msg += "\n"
+    
+    elif position_status == "SHORT":
+        # Wybieramy niższy (bezpieczniejszy) stop dla Shorta
+        smart_sl = min(high_out, atr_sl_short)
+        source = "ATR" if smart_sl == atr_sl_short else "Kanał"
+        
+        msg += f"ℹ️ **STATUS: {symbol} [SHORT]**\n   Cena: {price:.2f}\n   🛡️ **SL: {smart_sl:.2f}** ({source})\n"
+        if price > smart_sl: msg += f"   🚨 **ALARM: PRZEBICIE SL!**\n"
+        msg += "\n"
+
+    return msg
+
+# === LOGIKA MEAN REVERSION ===
 def check_meanrev(symbol, params, position_status):
     rsi_p, r_buy, r_sell, ex_l, ex_s = params
     df = get_market_data(symbol)
@@ -171,24 +189,19 @@ def check_meanrev(symbol, params, position_status):
 # === GŁÓWNA FUNKCJA ===
 def main():
     report = ""
-    
-    # 1. Sprawdź Strategię TREND
     for symbol, params in PORTFOLIO_TREND.items():
         status = MOJE_POZYCJE.get(symbol, None)
         alert = check_trend(symbol, params, status)
         if alert: report += alert
             
-    # 2. Sprawdź Strategię MEAN REVERSION
     for symbol, params in PORTFOLIO_MEANREV.items():
         status = MOJE_POZYCJE.get(symbol, None)
         alert = check_meanrev(symbol, params, status)
         if alert: report += alert
             
     if report:
-        header = f"🔔 **RAPORT PORTFELA** ({datetime.now().strftime('%Y-%m-%d %H:%M')} UTC)\n\n"
+        header = f"🔔 **RAPORT PORTFELA** ({datetime.now().strftime('%H:%M')} UTC)\n\n"
         send_telegram(header + report)
 
 if __name__ == "__main__":
     main()
-
-
