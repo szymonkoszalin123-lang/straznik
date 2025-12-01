@@ -13,6 +13,10 @@ MOJE_POZYCJE = {
     # "BTC-USD": "LONG",
     # "SI=F": "LONG",
     "^STOXX50E": "SHORT",
+    "BTC-USD": "SHORT",
+    "DOGE-USD": "SHORT",
+    "SOL-USD": "SHORT",
+    "LE=F": "SHORT"
 }
 
 # ==================================================
@@ -28,8 +32,7 @@ PORTFOLIO_TREND = {
     "DOT-USD": [5, 30, 30],
     "KSM-USD": [10, 30, 30],
     "DOGE-USD":[5, 10, 100],
-    "LE=F":    [40, 25, 30],
-    "^NDX":    [40, 50, 50]
+    "LE=F":    [40, 25, 30]
 }
 
 # 2. PORTFOLIO MEAN REVERSION (RSI + ATR)
@@ -170,3 +173,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
