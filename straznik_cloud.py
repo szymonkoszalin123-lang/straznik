@@ -25,14 +25,14 @@ MOJE_POZYCJE = {
 # 1. PORTFOLIO TREND FOLLOWING (Wybicia + EMA)
 # Format: "Symbol": [IN, OUT, EMA]
 PORTFOLIO_TREND = {
-    "BTC-USD": [60, 30, 100],
-    "ETH-USD": [60, 10, 50],
-    "SOL-USD": [15, 5, 50],
-    "DOT-USD": [5, 30, 30],
-    "KSM-USD": [10, 30, 30],
-    "DOGE-USD":[5, 10, 100],
-    "LE=F":    [40, 25, 30],
-    "^NDX":    [40, 50, 50] # Zapasowy
+    "BTC-USD": [60, 30, 100, 14, 4.0],
+    "ETH-USD": [60, 10, 50, 14, 4.5],
+    "SOL-USD": [15, 5,  50, 14, 4.5],
+    "DOT-USD": [5,  30, 30, 14, 4.0],
+    "KSM-USD": [10, 30, 30, 14, 4.5],
+    "DOGE-USD":[5,  10, 100, 14, 5.0],
+    "LE=F":    [40, 25, 30, 14, 5.0],
+    "^NDX":    [40, 50, 50, 14, 5.0]
 }
 
 # 2. PORTFOLIO MEAN REVERSION (RSI + ATR)
@@ -205,3 +205,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
