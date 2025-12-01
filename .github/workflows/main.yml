@@ -2,8 +2,8 @@ name: Straznik Rynku
 
 on:
   schedule:
-    # Uruchamiaj w 11. i 41. minucie każdej godziny
-    - cron: '11,41 * * * *'
+    # Uruchamiaj w 11. i 37. minucie każdej godziny
+    - cron: '11,37 * * * *'
   workflow_dispatch: # Pozwala uruchomić ręcznie przyciskiem
 
 jobs:
