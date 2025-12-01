@@ -37,7 +37,7 @@ PORTFOLIO_TREND = {
 
 # 2. PORTFOLIO MEAN REVERSION (RSI + ATR)
 # Format: "Symbol": [RSI_PER, RSI_BUY, RSI_SELL, RSI_EXIT_L, RSI_EXIT_S]
-PORTFOLIO = {
+PORTFOLIO_MEANREV = {
     "CC=F":  [5, 10, 90, 50, 50],
     "CT=F":  [5, 30, 80, 50, 40],
     "GC=F":  [14, 30, 90, 60, 50],
@@ -190,4 +190,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
