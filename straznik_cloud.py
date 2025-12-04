@@ -17,7 +17,6 @@ MOJE_POZYCJE = {
     "^STOXX50E": "SHORT",
     "BTC-USD": "SHORT",
     "DOGE-USD": "SHORT",
-    "SOL-USD": "SHORT",
     "LE=F": "SHORT"
 }
 
