@@ -13,8 +13,7 @@ TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
 MOJE_POZYCJE = {
     # "BTC-USD": "LONG",
     # "SI=F": "LONG",
-    # "^STOXX50E": "SHORT",
-    "BTC-USD": "SHORT",
+    # "^STOXX50E": "SHORT",
 }
 
 # === BAZA DANYCH RYNKÓW ===
