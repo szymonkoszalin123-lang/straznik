@@ -13,7 +13,8 @@ TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
 MOJE_POZYCJE = {
     # "BTC-USD": "LONG",
     # "SI=F": "LONG",
-    # "^STOXX50E": "SHORT",
+    # "^STOXX50E": "SHORT",
+    "GALA-USD": "SHORT",
 }
 
 # === BAZA DANYCH RYNKÓW ===
@@ -25,7 +26,8 @@ PORTFOLIO_TREND = {
     "SOL-USD": [15, 5,  50, 14, 4.5],
     "DOT-USD": [5,  30, 30, 14, 4.0],
     "KSM-USD": [10, 30, 30, 14, 4.5],
-    "DOGE-USD":[5,  10, 100, 14, 5.0],
+    "GALA-USD": [10, 20, 50, 14, 5.0],
+    "DOGE-USD": [5,  10, 100, 14, 5.0],
     "LE=F":    [40, 25, 30, 14, 5.0],
     "^NDX":    [40, 50, 50, 14, 5.0]
 }
@@ -200,4 +202,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
