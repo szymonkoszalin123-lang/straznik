@@ -96,7 +96,6 @@ def calculate_rsi(series, period):
 
 # === LOGIKA TREND FOLLOWING ===
 def check_trend(symbol, params, position_status):
-    # Rozpakowujemy 6 parametrów (ostatni to prec - precyzja)
     in_p, out_p, ema_p, atr_p, k_tsl, prec = params
     
     df = get_market_data(symbol)
@@ -124,8 +123,6 @@ def check_trend(symbol, params, position_status):
     
     msg = ""
 
-    # Używamy f-stringa z zagnieżdżonym formatowaniem: :.{prec}f
-    
     # 1. WEJŚCIA
     if position_status is None:
         if price > ema and price > high_in:
@@ -152,9 +149,8 @@ def check_trend(symbol, params, position_status):
 
     return msg
 
-# === LOGIKA MEAN REVERSION ===
+# === LOGIKA MEAN REVERSION (Z MODYFIKACJĄ PODGLĄDU RSI) ===
 def check_meanrev(symbol, params, position_status):
-    # Rozpakowujemy 6 parametrów
     rsi_p, r_buy, r_sell, ex_l, ex_s, prec = params
     
     df = get_market_data(symbol)
@@ -167,19 +163,32 @@ def check_meanrev(symbol, params, position_status):
     
     msg = ""
     
+    # 1. SZUKANIE OKAZJI (BRAK POZYCJI)
     if position_status is None:
         if current_rsi < r_buy:
             msg += f"🧲 **OKAZJA LONG!** [{last_date}]\n{symbol}: RSI {current_rsi:.1f} (< {r_buy})\nCena: {price:.{prec}f}\n\n"
         elif current_rsi > r_sell:
             msg += f"🧲 **OKAZJA SHORT!** [{last_date}]\n{symbol}: RSI {current_rsi:.1f} (> {r_sell})\nCena: {price:.{prec}f}\n\n"
     
+    # 2. MONITOROWANIE OTWARTEJ POZYCJI (LONG)
     elif position_status == "LONG":
+        # Zawsze wyświetl status RSI
+        msg += f"ℹ️ **STATUS: {symbol} [LONG]**\n   Cena: {price:.{prec}f}\n   📊 **RSI: {current_rsi:.1f}** (Cel: > {ex_l})\n"
+        
+        # Sprawdź czy zamykać
         if current_rsi > ex_l:
-            msg += f"💰 **ZAMKNIJ LONGA!** [{last_date}]\n{symbol}: RSI {current_rsi:.1f} > {ex_l}\n\n"
+            msg += f"   💰 **ZAMKNIJ POZYCJĘ! (Take Profit)**\n"
+        msg += "\n"
 
+    # 3. MONITOROWANIE OTWARTEJ POZYCJI (SHORT)
     elif position_status == "SHORT":
+        # Zawsze wyświetl status RSI
+        msg += f"ℹ️ **STATUS: {symbol} [SHORT]**\n   Cena: {price:.{prec}f}\n   📊 **RSI: {current_rsi:.1f}** (Cel: < {ex_s})\n"
+        
+        # Sprawdź czy zamykać
         if current_rsi < ex_s:
-            msg += f"💰 **ZAMKNIJ SHORTA!** [{last_date}]\n{symbol}: RSI {current_rsi:.1f} < {ex_s}\n\n"
+            msg += f"   💰 **ZAMKNIJ POZYCJĘ! (Take Profit)**\n"
+        msg += "\n"
 
     return msg
 
