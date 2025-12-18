@@ -55,22 +55,6 @@ PORTFOLIO_MEANREV = {
     "GBPJPY=X": [14, 30, 90, 60, 50, 3]
 }
 
-# 2. PORTFOLIO MEAN REVERSION
-# Format: "Symbol": [RSI_PER, RSI_BUY, RSI_SELL, RSI_EXIT_L, RSI_EXIT_S, PRECYZJA]
-PORTFOLIO_MEANREV = {
-    "SI=F":   [5, 10, 90, 70, 50, 3],
-    "ZW=F":   [14, 30, 80, 50, 50, 2],
-    "^FTSE":  [14, 30, 80, 50, 50, 1],
-    "^GDAXI": [14, 30, 80, 60, 50, 1],
-    "^FCHI":  [5, 20, 90, 60, 50, 1],
-    "^STOXX50E": [5, 30, 90, 50, 40, 1],
-    "^GSPC":  [5, 20, 90, 50, 50, 2],
-    "^VIX":   [3, 30, 70, 60, 50, 2],
-    "^N225":  [5, 10, 90, 60, 40, 0], # Nikkei jest w tysiącach (0 miejsc)
-    "GBPPLN=X": [3, 20, 70, 60, 40, 4], # Waluty (4 miejsca standardowo)
-    "GBPJPY=X": [14, 30, 90, 60, 50, 3] # Jeny (3 miejsca)
-}
-
 # ==================================================
 # FUNKCJE POMOCNICZE
 # ==================================================
@@ -218,3 +202,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
