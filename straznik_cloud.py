@@ -14,7 +14,6 @@ MOJE_POZYCJE = {
     # "SI=F": "LONG",
     # "^STOXX50E": "SHORT",
     "GALA-USD": "SHORT",
-    "^GSPC": "LONG"
 }
 
 # === BAZA DANYCH RYNKÓW ===
