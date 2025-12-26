@@ -14,7 +14,8 @@ MOJE_POZYCJE = {
     # "SI=F": "LONG",
     # "^STOXX50E": "SHORT",
     "^NDX": "SHORT",
-    "SI=F": "SHORT"
+    "SI=F": "SHORT",
+    "CT=F": "SHORT"
 }
 
 # === BAZA DANYCH RYNKÓW ===
