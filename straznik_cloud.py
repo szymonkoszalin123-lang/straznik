@@ -13,6 +13,7 @@ MOJE_POZYCJE = {
     # "BTC-USD": "LONG",
     # "SI=F": "LONG",
     # "^STOXX50E": "SHORT",
+    "^NDX": "SHORT"
 }
 
 # === BAZA DANYCH RYNKÓW ===
