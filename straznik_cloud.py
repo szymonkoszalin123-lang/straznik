@@ -13,7 +13,6 @@ MOJE_POZYCJE = {
     # "BTC-USD": "LONG",
     # "SI=F": "LONG",
     # "^STOXX50E": "SHORT",
-    "^NDX": "SHORT",
     "CT=F": "SHORT"
 }
 
