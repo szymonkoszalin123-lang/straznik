@@ -13,6 +13,7 @@ MOJE_POZYCJE = {
     # "BTC-USD": "LONG",
     # "SI=F": "LONG",
     # "^STOXX50E": "SHORT",
+    "^FCHI": "SHORT",
 }
 
 # === BAZA DANYCH RYNKÓW ===
@@ -208,4 +209,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
