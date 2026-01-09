@@ -124,25 +124,25 @@ def check_trend(symbol, params, position_status):
     # 1. WEJŚCIA
     if position_status is None:
         if price > ema and price > high_in:
-             msg += f"🌊 **TREND LONG!** [{last_date}]\n{symbol}: Wybicie {high_in:.{prec}f}\nCena: {price:.{prec}f}\n\n"
+             msg += f"**TREND LONG!** [{last_date}]\n{symbol}: Wybicie {high_in:.{prec}f}\nCena: {price:.{prec}f}\n\n"
         elif price < ema and price < low_in:
-             msg += f"🌊 **TREND SHORT!** [{last_date}]\n{symbol}: Wybicie {low_in:.{prec}f}\nCena: {price:.{prec}f}\n\n"
+             msg += f"**TREND SHORT!** [{last_date}]\n{symbol}: Wybicie {low_in:.{prec}f}\nCena: {price:.{prec}f}\n\n"
 
     # 2. MONITOROWANIE
     elif position_status == "LONG":
         smart_sl = max(low_out, atr_sl_long)
         source = "ATR" if smart_sl == atr_sl_long else "Kanał"
         
-        msg += f"ℹ️ **STATUS: {symbol} [LONG]**\n   Cena: {price:.{prec}f}\n   🛡️ **SL: {smart_sl:.{prec}f}** ({source})\n"
-        if price < smart_sl: msg += f"   🚨 **ALARM: PRZEBICIE SL!**\n"
+        msg += f"**STATUS: {symbol} [LONG]**\n   Cena: {price:.{prec}f}\n   **SL: {smart_sl:.{prec}f}** ({source})\n"
+        if price < smart_sl: msg += f"   **ALARM: PRZEBICIE SL!**\n"
         msg += "\n"
     
     elif position_status == "SHORT":
         smart_sl = min(high_out, atr_sl_short)
         source = "ATR" if smart_sl == atr_sl_short else "Kanał"
         
-        msg += f"ℹ️ **STATUS: {symbol} [SHORT]**\n   Cena: {price:.{prec}f}\n   🛡️ **SL: {smart_sl:.{prec}f}** ({source})\n"
-        if price > smart_sl: msg += f"   🚨 **ALARM: PRZEBICIE SL!**\n"
+        msg += f"**STATUS: {symbol} [SHORT]**\n   Cena: {price:.{prec}f}\n   **SL: {smart_sl:.{prec}f}** ({source})\n"
+        if price > smart_sl: msg += f"   **ALARM: PRZEBICIE SL!**\n"
         msg += "\n"
 
     return msg
@@ -164,28 +164,28 @@ def check_meanrev(symbol, params, position_status):
     # 1. SZUKANIE OKAZJI (BRAK POZYCJI)
     if position_status is None:
         if current_rsi < r_buy:
-            msg += f"🧲 **OKAZJA LONG!** [{last_date}]\n{symbol}: RSI {current_rsi:.1f} (< {r_buy})\nCena: {price:.{prec}f}\n\n"
+            msg += f"**OKAZJA LONG!** [{last_date}]\n{symbol}: RSI {current_rsi:.1f} (< {r_buy})\nCena: {price:.{prec}f}\n\n"
         elif current_rsi > r_sell:
-            msg += f"🧲 **OKAZJA SHORT!** [{last_date}]\n{symbol}: RSI {current_rsi:.1f} (> {r_sell})\nCena: {price:.{prec}f}\n\n"
+            msg += f"**OKAZJA SHORT!** [{last_date}]\n{symbol}: RSI {current_rsi:.1f} (> {r_sell})\nCena: {price:.{prec}f}\n\n"
     
     # 2. MONITOROWANIE OTWARTEJ POZYCJI (LONG)
     elif position_status == "LONG":
         # Zawsze wyświetl status RSI
-        msg += f"ℹ️ **STATUS: {symbol} [LONG]**\n   Cena: {price:.{prec}f}\n   📊 **RSI: {current_rsi:.1f}** (Cel: > {ex_l})\n"
+        msg += f"**STATUS: {symbol} [LONG]**\n   Cena: {price:.{prec}f}\n   **RSI: {current_rsi:.1f}** (Cel: > {ex_l})\n"
         
         # Sprawdź czy zamykać
         if current_rsi > ex_l:
-            msg += f"   💰 **ZAMKNIJ POZYCJĘ! (Take Profit)**\n"
+            msg += f"   **ZAMKNIJ POZYCJĘ! (Take Profit)**\n"
         msg += "\n"
 
     # 3. MONITOROWANIE OTWARTEJ POZYCJI (SHORT)
     elif position_status == "SHORT":
         # Zawsze wyświetl status RSI
-        msg += f"ℹ️ **STATUS: {symbol} [SHORT]**\n   Cena: {price:.{prec}f}\n   📊 **RSI: {current_rsi:.1f}** (Cel: < {ex_s})\n"
+        msg += f"**STATUS: {symbol} [SHORT]**\n   Cena: {price:.{prec}f}\n   **RSI: {current_rsi:.1f}** (Cel: < {ex_s})\n"
         
         # Sprawdź czy zamykać
         if current_rsi < ex_s:
-            msg += f"   💰 **ZAMKNIJ POZYCJĘ! (Take Profit)**\n"
+            msg += f"   **ZAMKNIJ POZYCJĘ! (Take Profit)**\n"
         msg += "\n"
 
     return msg
@@ -204,10 +204,11 @@ def main():
         if alert: report += alert
             
     if report:
-        header = f"🔔 **RAPORT PORTFELA** ({datetime.now().strftime('%H:%M')} UTC)\n\n"
+        header = f"**RAPORT RYNKU** ({datetime.now().strftime('%H:%M')} UTC)\n\n"
         send_telegram(header + report)
 
 if __name__ == "__main__":
     main()
+
 
 
